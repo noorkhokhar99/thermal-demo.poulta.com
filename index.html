@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poulta 360 — Thermal Command · Every bird’s heat, live</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B2A39; --ink-2:#0E3447; --panel:#10394E; --panel-2:#134159;
+  --teal:#149688; --teal-b:#1FC2AD; --teal-soft:#EAF6F4;
+  --mist:#F3F7F8; --slate:#8FA6B1; --line:rgba(255,255,255,.1);
+  --hot:#F1642E; --warm:#FFC233; --cold:#5B7BE8; --crit:#FF5F4A;
+  --note:#FFD84D;
+  --r:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--ink);color:#fff;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;letter-spacing:-.01em}
+.mono{font-family:'IBM Plex Mono',monospace}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--teal-b);outline-offset:2px}
+
+/* ═══ TOP BAR (poulta.com chrome) ═══ */
+.topbar{display:flex;align-items:center;gap:18px;padding:0 20px;height:58px;background:var(--ink-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:40}
+.logo{font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:#fff;text-decoration:none}
+.logo span{color:var(--teal-b)}
+.crumb{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--slate)}
+.crumb b{color:#fff;font-weight:500}
+.live{margin-left:auto;display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;color:var(--teal-b);border:1px solid rgba(31,194,173,.4);padding:6px 14px;border-radius:999px}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--teal-b);animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.25}}
+.pres-toggle{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:7px 14px;border-radius:999px;border:1px solid rgba(255,216,77,.5);background:transparent;color:var(--note)}
+body.presenter .pres-toggle{background:var(--note);color:var(--ink)}
+.user{width:34px;height:34px;border-radius:50%;background:var(--teal);display:grid;place-items:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:13px}
+
+/* ═══ APP GRID ═══ */
+.app{display:grid;grid-template-columns:216px 1fr 340px;gap:14px;padding:14px;max-width:1560px;margin:0 auto}
+@media(max-width:1180px){.app{grid-template-columns:1fr 340px}.sidebar{display:none}}
+@media(max-width:880px){.app{grid-template-columns:1fr}}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);position:relative}
+.p-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px}
+.p-title{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--slate)}
+.p-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--teal-b)}
+
+/* sidebar */
+.sidebar{display:flex;flex-direction:column;gap:14px}
+.shed-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer}
+.shed-item:last-child{border-bottom:0}
+.shed-item:hover{background:rgba(255,255,255,.03)}
+.shed-item.on{background:rgba(31,194,173,.09);border-left:3px solid var(--teal-b);padding-left:11px}
+.shed-item .sn{font-size:13.5px;font-weight:500}
+.shed-item .st{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px}
+.dot.ok{background:var(--teal-b)} .dot.warn{background:var(--warm)} .dot.crit{background:var(--crit)}
+.farm-meta{padding:14px 16px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--slate);line-height:2}
+.farm-meta b{color:#fff;font-weight:500}
+
+/* ═══ MAIN: 3D twin ═══ */
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.twin{overflow:hidden}
+#twin3d{width:100%;height:470px;display:block;touch-action:none;cursor:grab;background:#081f2b}
+#twin3d:active{cursor:grabbing}
+.twin-wrap{position:relative}
+.readout{position:absolute;top:14px;right:14px;text-align:right;z-index:5}
+.readout .rz{font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--slate)}
+.readout .rv{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600}
+.readout .rv em{font-style:normal;font-size:13px;color:var(--slate)}
+.clockchip{position:absolute;top:14px;left:14px;z-index:5;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:7px 13px;border-radius:8px;background:rgba(11,42,57,.8);border:1px solid var(--line)}
+.clockchip b{color:var(--teal-b)}
+.hint3d{position:absolute;bottom:12px;right:14px;z-index:5;font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:rgba(255,255,255,.4)}
+
+/* zone strip */
+.zones{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;padding:12px 16px 16px}
+@media(max-width:680px){.zones{grid-template-columns:repeat(4,1fr)}}
+.zone{border:1px solid var(--line);border-radius:10px;padding:9px 8px;text-align:center;background:var(--panel-2);cursor:pointer;transition:border-color .15s}
+.zone:hover{border-color:rgba(255,255,255,.3)}
+.zone.sel{border-color:var(--teal-b);box-shadow:0 0 0 1px var(--teal-b)}
+.zone .zn{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--slate);letter-spacing:.08em}
+.zone .zt{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;margin:2px 0}
+.zone .zd{font-family:'IBM Plex Mono',monospace;font-size:10.5px}
+.zd.up{color:var(--warm)} .zd.dn{color:#8FA8FF} .zd.ok{color:var(--teal-b)} .zd.cr{color:var(--crit)}
+
+/* playback */
+.playback{padding:14px 16px 18px}
+.pb-row{display:flex;align-items:center;gap:14px}
+.pb-btn{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;padding:8px 16px;border-radius:8px;border:1px solid rgba(31,194,173,.4);background:transparent;color:var(--teal-b)}
+.pb-btn.on{background:var(--teal-b);color:var(--ink)}
+input[type=range]{flex:1;appearance:none;height:6px;border-radius:3px;background:linear-gradient(90deg,#4B1D95,#A92A7A,#E85D2A,#FFC233);outline:none}
+input[type=range]::-webkit-slider-thumb{appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:3px solid var(--ink);box-shadow:0 0 0 2px var(--teal-b);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--teal-b);cursor:pointer}
+.pb-time{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;min-width:52px;text-align:right}
+.pb-marks{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--slate);margin-top:6px;padding:0 2px}
+.pb-events{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.ev{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);color:var(--slate);cursor:pointer}
+.ev:hover{border-color:rgba(255,255,255,.35);color:#fff}
+.ev i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px}
+.ev.c i{background:var(--cold)} .ev.m i{background:var(--crit)} .ev.h i{background:var(--hot)}
+
+/* ═══ RIGHT COLUMN ═══ */
+.right{display:flex;flex-direction:column;gap:14px;min-width:0}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.kpi{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px}
+.kpi .kv{font-family:'Space Grotesk',sans-serif;font-size:24px;font-weight:700}
+.kpi .kv small{font-size:13px;font-weight:500;color:var(--slate)}
+.kpi .kl{font-size:11.5px;color:var(--slate);margin-top:3px}
+.kpi.warm .kv{color:var(--warm)} .kpi.tealc .kv{color:var(--teal-b)} .kpi.critc .kv{color:var(--crit)}
+
+/* validation */
+.val{padding:4px 16px 16px}
+.val-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.val-row:last-child{border-bottom:0}
+.val-row .vk{color:var(--slate)}
+.val-row .vv{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;color:var(--teal-b)}
+.gauge{height:8px;border-radius:4px;background:var(--panel-2);position:relative;margin:12px 0 4px;overflow:hidden}
+.gauge .band{position:absolute;left:30%;right:30%;top:0;bottom:0;background:rgba(31,194,173,.25)}
+.gauge .pin{position:absolute;top:-2px;bottom:-2px;width:3px;border-radius:2px;background:#fff;left:54%}
+.gauge-l{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--slate)}
+
+/* alerts */
+.feed{max-height:280px;overflow-y:auto;padding:0 8px 10px}
+.al{display:flex;gap:12px;padding:11px 10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.al:hover{background:rgba(255,255,255,.04);border-color:var(--line)}
+.al.past{opacity:.45}
+.al .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:15px;flex:none}
+.al.h .ic{background:rgba(241,100,46,.16);color:var(--hot)}
+.al.c .ic{background:rgba(91,123,232,.16);color:#8FA8FF}
+.al.m .ic{background:rgba(255,95,74,.16);color:var(--crit)}
+.al .at{font-size:13px;font-weight:600}
+.al .ab{font-size:12px;color:var(--slate)}
+.al .tm{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate);flex:none}
+
+/* device health */
+.dev{padding:0 16px 16px}
+.dev-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.dev-row:last-child{border-bottom:0}
+.dev-row .dn{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600}
+.dev-row .dm{margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate)}
+
+/* ═══ SOP PANEL ═══ */
+.sop{padding:0 12px 14px}
+.sop-row{display:flex;align-items:flex-start;gap:11px;padding:10px 6px;border-bottom:1px solid var(--line)}
+.sop-row:last-child{border-bottom:0}
+.sop-row .sk{flex:none;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-family:'IBM Plex Mono',monospace;font-size:11.5px;font-weight:600}
+.sop-row.done .sk{background:rgba(31,194,173,.15);color:var(--teal-b)}
+.sop-row.due .sk{background:rgba(255,194,51,.15);color:var(--warm)}
+.sop-row.wait .sk{background:rgba(255,255,255,.07);color:var(--slate)}
+.sop-row.info .sk{background:rgba(91,123,232,.15);color:#8FA8FF}
+.sop-row .sa{font-size:13px;font-weight:600}
+.sop-row .sb{font-size:11.5px;color:var(--slate)}
+.sop-row .ss{margin-left:auto;flex:none;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--slate);padding-top:2px}
+
+/* ═══ FLEET SECTION ═══ */
+.fleet{max-width:1560px;margin:26px auto 0;padding:36px 14px 10px;border-top:1px solid var(--line)}
+.fleet .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;font-weight:600}
+.fleet h2{font-size:clamp(24px,3vw,34px);margin:12px 0 8px}
+.fl-lede{color:var(--slate);max-width:700px;margin-bottom:22px}
+.fl-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.fl-stat{font-family:'IBM Plex Mono',monospace;font-size:12.5px;padding:9px 15px;border-radius:999px;border:1px solid var(--line);background:var(--panel)}
+.fl-stat b{font-weight:600}
+.fl-stat.t b{color:var(--teal-b)} .fl-stat.w b{color:var(--warm)} .fl-stat.c b{color:var(--crit)} .fl-stat.g b{color:var(--slate)}
+.fl-gridwrap{overflow:hidden}
+.fl-grid{display:grid;grid-template-columns:repeat(50,1fr);gap:3px;padding:6px 16px 14px}
+@media(max-width:900px){.fl-grid{grid-template-columns:repeat(25,1fr)}}
+.fl-grid i{aspect-ratio:1;border-radius:2px;background:var(--teal-b);opacity:.85;cursor:crosshair;transition:transform .1s}
+.fl-grid i:hover{transform:scale(1.7);opacity:1;outline:1px solid #fff}
+.fl-legend{display:flex;gap:20px;flex-wrap:wrap;padding:0 16px 16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--slate)}
+.fl-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.fl-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px}
+@media(max-width:900px){.fl-cols{grid-template-columns:1fr}}
+.fl-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.fl-card h3{font-size:16px;margin-bottom:8px;color:var(--teal-b)}
+.fl-card p{font-size:13px;color:var(--slate)}
+
+/* ═══ PRESENTER NOTES ═══ */
+.note{display:none;position:absolute;z-index:8;max-width:240px;background:var(--note);color:#3a2f00;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.note b{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.14em;margin-bottom:3px}
+body.presenter .note{display:block}
+
+/* ═══ PROOF STRIP ═══ */
+.proof{max-width:1560px;margin:26px auto 0;padding:34px 14px 8px;border-top:1px solid var(--line)}
+.proof .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--teal-b);font-weight:600}
+.proof h2{font-size:clamp(24px,3vw,34px);margin:12px 0 6px}
+.proof .pr-lede{color:var(--slate);max-width:680px;margin-bottom:22px}
+.pr-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.pr-grid{grid-template-columns:1fr}}
+.pr{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.pr .pv{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:700;color:var(--teal-b)}
+.pr .pl{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);margin:4px 0 10px}
+.pr p{font-size:13px;color:var(--slate)}
+
+/* ═══ CTA ═══ */
+.cta{max-width:1560px;margin:6px auto 0;padding:48px 14px 56px;text-align:center}
+.cta h2{font-size:clamp(26px,3.4vw,38px)}
+.cta .cta-lede{color:var(--slate);max-width:600px;margin:14px auto 26px;font-size:15px}
+.cta a.btn{display:inline-block;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:15px;padding:15px 36px;border-radius:999px;background:var(--teal-b);color:var(--ink);text-decoration:none;transition:background .15s}
+.cta a.btn:hover{background:#fff}
+.cta .sub{display:block;margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--slate)}
+
+/* ═══ UPGRADE ROADMAP (below dashboard) ═══ */
+.roadmap{max-width:1560px;margin:26px auto 0;padding:34px 14px 60px;border-top:1px solid var(--line)}
+.roadmap .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--note);font-weight:600}
+.roadmap h2{font-size:clamp(24px,3vw,34px);margin:12px 0 8px}
+.roadmap>.wrap>p{color:var(--slate);max-width:680px;margin-bottom:34px}
+.rm-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:1100px){.rm-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.rm-grid{grid-template-columns:1fr}}
+.rm{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:22px}
+.rm .tag{font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:600;letter-spacing:.1em;padding:4px 10px;border-radius:6px;display:inline-block;margin-bottom:14px}
+.tag.now{background:rgba(31,194,173,.15);color:var(--teal-b)}
+.tag.next{background:rgba(255,194,51,.14);color:var(--warm)}
+.tag.later{background:rgba(255,255,255,.08);color:var(--slate)}
+.rm h3{font-size:16.5px;margin-bottom:7px}
+.rm p{font-size:13px;color:var(--slate)}
+.rm .why{margin-top:12px;padding-top:10px;border-top:1px dashed var(--line);font-size:12px;color:var(--teal-b)}
+.rm .why b{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.12em;color:var(--slate);display:block;margin-bottom:2px}
+footer{border-top:1px solid var(--line);padding:22px 14px;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--slate)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP BAR ═══ -->
+<div class="topbar">
+  <a class="logo" href="#">poulta<span>.</span>com</a>
+  <span class="crumb">Cluster C04 / <b>Farm 12</b> / House 1 · <b>Thermal Command</b></span>
+  <div class="live"><i></i> LIVE</div>
+  <button class="pres-toggle" id="presBtn">◈ Presenter</button>
+  <div class="user">AM</div>
+</div>
+
+<div class="app">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <div class="sidebar">
+    <div class="panel">
+      <div class="p-head"><span class="p-title">Houses</span><span class="p-badge">4 online</span></div>
+      <div class="shed-item on"><span class="sn"><span class="dot warn"></span>House 1</span><span class="st">31.8°</span></div>
+      <div class="shed-item"><span class="sn"><span class="dot ok"></span>House 2</span><span class="st">24.2°</span></div>
+      <div class="shed-item"><span class="sn"><span class="dot ok"></span>House 3</span><span class="st">24.7°</span></div>
+      <div class="shed-item"><span class="sn"><span class="dot ok"></span>House 4</span><span class="st">23.9°</span></div>
+    </div>
+    <div class="panel">
+      <div class="p-head"><span class="p-title">Flock</span></div>
+      <div class="farm-meta">
+        Breed <b>Ross 308</b><br>
+        Age <b>Day 26</b><br>
+        Birds <b>38,400</b><br>
+        Target temp <b>24.0 °C</b><br>
+        Cameras <b>2 / 2 online</b>
+      </div>
+      <div class="note" style="top:10px;right:-250px"><b>PRESENTER</b>Alerts are age-aware — Day 5 and Day 26 have different baselines. No generic thresholds.</div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main">
+    <div class="panel twin">
+      <div class="p-head">
+        <span class="p-title">House 1 · Live thermal twin</span>
+        <span class="p-badge" id="modeBadge">LIVE · streaming</span>
+      </div>
+      <div class="twin-wrap">
+        <div class="clockchip">HOUSE TIME <b id="clock">15:18</b></div>
+        <div class="readout">
+          <div class="rz" id="roZone">Flock baseline</div>
+          <div class="rv"><span id="roTemp">24.6</span><em> °C</em></div>
+        </div>
+        <canvas id="twin3d" aria-label="3D thermal digital twin of House 1"></canvas>
+        <div class="hint3d">drag rotate · scroll zoom · tap a zone below</div>
+        <div class="note" style="bottom:56px;left:16px"><b>PRESENTER</b>Hand the mouse to the client. Their shed, their birds, live. Rotating it themselves is the moment they believe it.</div>
+      </div>
+      <div class="zones" id="zoneStrip"></div>
+    </div>
+
+    <div class="panel playback">
+      <div class="p-head" style="padding:0 0 10px">
+        <span class="p-title">24-hour replay</span>
+        <span class="p-badge">every frame stored</span>
+      </div>
+      <div class="pb-row">
+        <button class="pb-btn on" id="liveBtn">LIVE</button>
+        <input type="range" id="timeSlider" min="0" max="24" step="0.05" value="15.3" aria-label="Replay time of day">
+        <span class="pb-time" id="pbTime">15:18</span>
+      </div>
+      <div class="pb-marks"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+      <div class="pb-events">
+        <button class="ev c" data-t="5.2"><i></i>05:12 Cold draft · Z2</button>
+        <button class="ev m" data-t="9.7"><i></i>09:41 Mortality flag · Z6</button>
+        <button class="ev h" data-t="13.95"><i></i>13:56 Heat stress · Z4/Z8</button>
+      </div>
+      <div class="note" style="top:-8px;right:16px"><b>PRESENTER</b>Scrub to 09:41. Say: “Your team found this bird at the 4pm walk. Poulta flagged it at 09:41 — with the exact row.”</div>
+    </div>
+  </div>
+
+  <!-- ═══ RIGHT ═══ -->
+  <div class="right">
+    <div class="panel">
+      <div class="p-head"><span class="p-title">Today</span><span class="p-badge">Day 26</span></div>
+      <div class="kpis">
+        <div class="kpi tealc"><div class="kv">94<small>%</small></div><div class="kl">Thermal uniformity</div></div>
+        <div class="kpi warm"><div class="kv">38<small> min</small></div><div class="kl">Heat-stress exposure</div></div>
+        <div class="kpi critc"><div class="kv">2</div><div class="kl">Mortality flags (1 confirmed)</div></div>
+        <div class="kpi tealc"><div class="kv">100<small>%</small></div><div class="kl">Data completeness</div></div>
+      </div>
+      <div class="note" style="top:44px;left:-250px"><b>PRESENTER</b>Uniformity is the number integrators are paid on. Poulta is the only screen showing it live.</div>
+    </div>
+
+    <div class="panel">
+      <div class="p-head"><span class="p-title">Validation · thermal vs controller</span><span class="p-badge">auto</span></div>
+      <div class="val">
+        <div class="gauge"><div class="band"></div><div class="pin"></div></div>
+        <div class="gauge-l"><span>−2.0</span><span>tolerance band</span><span>+2.0</span></div>
+        <div class="val-row"><span class="vk">Current offset</span><span class="vv">+0.4 °C · in band</span></div>
+        <div class="val-row"><span class="vk">Reference</span><span class="vv">Climate controller + meter</span></div>
+        <div class="val-row"><span class="vk">Bias correction</span><span class="vv">Applied · rolling 24 h</span></div>
+        <div class="val-row"><span class="vk">Last cross-check</span><span class="vv">2 min ago</span></div>
+      </div>
+      <div class="note" style="top:10px;left:-250px"><b>PRESENTER</b>This panel kills the accuracy objection before it's raised. Show it early, unprompted.</div>
+    </div>
+
+    <div class="panel">
+      <div class="p-head"><span class="p-title">Alerts · House 1</span><span class="p-badge" id="alCount">3 today</span></div>
+      <div class="feed" id="feed">
+        <div class="al h" data-t="13.95"><div class="ic">▲</div><div><div class="at">Heat stress — Zone 4 / 8</div><div class="ab">+3.4 °C over baseline · tunnel fans raised · resolved 15:02</div></div><div class="tm">13:56</div></div>
+        <div class="al m" data-t="9.7"><div class="ic">●</div><div><div class="at">Mortality flag — Zone 6, row 2</div><div class="ab">Cooling signature · pickup logged 10:12 by farm crew</div></div><div class="tm">09:41</div></div>
+        <div class="al c" data-t="5.2"><div class="ic">▼</div><div><div class="at">Cold draft — Zone 2, west wall</div><div class="ab">−2.8 °C streak · curtain gap fixed 06:30</div></div><div class="tm">05:12</div></div>
+      </div>
+      <div class="note" style="bottom:-8px;left:-250px"><b>PRESENTER</b>Every alert ends with a person and an action. Sell the closed loop, not the notification.</div>
+    </div>
+
+    <div class="panel">
+      <div class="p-head"><span class="p-title">Camera health</span><span class="p-badge">2/2 OK</span></div>
+      <div class="dev">
+        <div class="dev-row"><span class="dot ok"></span><span class="dn">AQ01</span><span class="dm">up 41 d · data 12 s ago</span></div>
+        <div class="dev-row"><span class="dot ok"></span><span class="dn">AQ02</span><span class="dm">up 41 d · data 9 s ago</span></div>
+        <div class="dev-row"><span class="dot warn"></span><span class="dn">Lens clean</span><span class="dm">due in 6 days · SOP-TH-02</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="p-head"><span class="p-title">SOP · thermal ops</span><span class="p-badge">House 1 · broiler</span></div>
+      <div class="sop">
+        <div class="sop-row done"><span class="sk">✓</span><div><div class="sa">Lens clean — blower → microfiber</div><div class="sb">Done Day 20 · dry-cloth prohibited · verified after clean</div></div><span class="ss">SOP-TH-02</span></div>
+        <div class="sop-row due"><span class="sk">6d</span><div><div class="sa">Next lens clean (15-day cycle)</div><div class="sb">Assigned: farm maintenance · Day 32</div></div><span class="ss">SOP-TH-02</span></div>
+        <div class="sop-row wait"><span class="sk">◷</span><div><div class="sa">Washdown cover &amp; post-wash verify</div><div class="sb">At cycle end (~Day 38) · cover both units before spray</div></div><span class="ss">SOP-TH-03</span></div>
+        <div class="sop-row done"><span class="sk">✓</span><div><div class="sa">Monthly reference check vs meter</div><div class="sb">Passed · offset +0.4 °C, in band</div></div><span class="ss">SOP-TH-04</span></div>
+        <div class="sop-row info"><span class="sk">→</span><div><div class="sa">Issue with readings?</div><div class="sb">Raise to Complaint Management Team — single window, 24 h ack</div></div><span class="ss">SOP-TH-01</span></div>
+      </div>
+      <div class="note" style="top:8px;left:-250px"><b>PRESENTER</b>SOP lives inside the product — the client sees the discipline behind the data, not just the data.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROOF STRIP — one day, three saves ═══ -->
+<div class="proof">
+  <div class="wrap">
+    <div class="eyebrow">Why thermal command</div>
+    <h2>One day in House 1. Three saves.</h2>
+    <p class="pr-lede">Everything below happened on the screen above — scrub the replay and watch each one. No extra rounds, no guesswork: two thermal cameras reading every bird, all day.</p>
+    <div class="pr-grid">
+      <div class="pr"><div class="pv">6+ hours earlier</div><div class="pl">Mortality flag · 09:41</div><p>A cooling signature in Zone 6, row 2 — flagged before mid-morning, with the exact row. Walk rounds would have found it in the afternoon.</p></div>
+      <div class="pr"><div class="pv">38 min</div><div class="pl">Heat-stress exposure · capped</div><p>Detected 13:56, tunnel fans raised, closed by 15:02. Exposure minutes are counted — because every one of them costs weight.</p></div>
+      <div class="pr"><div class="pv">05:12</div><div class="pl">Cold draft · caught pre-dawn</div><p>A −2.8 °C streak on the west wall while the farm slept. Curtain gap fixed by 06:30 — before it ever touched the flock.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FLEET SCALE — 1,000 HOUSES ═══ -->
+<div class="fleet">
+  <div class="wrap">
+    <div class="eyebrow" style="color:var(--teal-b)">Fleet command · Poulta NOC</div>
+    <h2>1,000 houses. One screen. Zero extra staff.</h2>
+    <p class="fl-lede">Nobody watches 1,000 houses — the system does. Humans see only the exceptions. Every cell below is a live house; the grid is the entire operation at a glance. Hover any cell.</p>
+    <div class="fl-stats" id="flStats"></div>
+    <div class="fl-gridwrap panel">
+      <div class="p-head"><span class="p-title">Fleet thermal status · all clusters</span><span class="p-badge" id="flBadge">—</span></div>
+      <div class="fl-grid" id="flGrid" aria-label="Fleet grid of 1,000 houses"></div>
+      <div class="fl-legend">
+        <span><i style="background:var(--teal-b)"></i> In baseline</span>
+        <span><i style="background:var(--warm)"></i> Attention</span>
+        <span><i style="background:var(--crit)"></i> Critical — act now</span>
+        <span><i style="background:#3a5666"></i> Offline / no flock</span>
+      </div>
+    </div>
+    <div class="fl-cols">
+      <div class="fl-card"><h3>Management by exception</h3><p>The fleet queue surfaces only houses pulling away from baseline — ranked by severity, each with zone, cause and action. 1,000 houses become a to-do list of twelve.</p></div>
+      <div class="fl-card"><h3>The ops math</h3><p>1,000 houses = 2,000 cameras + 1,000 edge units, each self-reporting health, lens-clean status and data completeness. SOP compliance is a fleet KPI, not a paper file.</p></div>
+      <div class="fl-card"><h3>What the Poulta NOC sees</h3><p>Cluster rollups — uniformity, heat-stress minutes, flags, camera uptime — per farm, per region, per country. The same screen works for a 4-house farmer and a national integrator.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ UPGRADE ROADMAP ═══ -->
+<div class="roadmap">
+  <div class="wrap">
+    <div class="eyebrow">Poulta Thermal · Product roadmap</div>
+    <h2>Live today. Shipping next. Built for fleet scale.</h2>
+    <p>Everything above the line runs in the product today. Below is what ships next — each capability tagged by release stage and the moment it creates for your operation.</p>
+    <div class="rm-grid">
+      <div class="rm"><span class="tag now">LIVE TODAY</span><h3>3D thermal twin</h3><p>The shed as a live rotating heat map — not a table of numbers. The client sees their house, not a chart.</p><div class="why"><b>WHY IT MATTERS</b>Your house, not a chart — rotate it and read the whole flock in seconds.</div></div>
+      <div class="rm"><span class="tag now">LIVE TODAY</span><h3>24-hour replay</h3><p>Scrub through the night. Every heat event replays with its alert, timestamp and outcome.</p><div class="why"><b>WHY IT MATTERS</b>Every event replays with its alert, timestamp and outcome — proof, not promises.</div></div>
+      <div class="rm"><span class="tag now">LIVE TODAY</span><h3>Validation panel</h3><p>Thermal vs climate-controller offset, live, with the tolerance band and auto bias correction visible.</p><div class="why"><b>WHY IT MATTERS</b>Accuracy you can audit — offset, tolerance band and bias correction, always on screen.</div></div>
+      <div class="rm"><span class="tag now">LIVE TODAY</span><h3>Fleet command grid</h3><p>Every house in the operation as one live grid — humans see only the exceptions, ranked by severity with zone, cause and action.</p><div class="why"><b>WHY IT MATTERS</b>Scales from 4 houses to 1,000 without adding a single monitoring seat.</div></div>
+      <div class="rm"><span class="tag next">NEXT</span><h3>Mortality replay clip</h3><p>Auto-generated 10-second thermal clip of each flag — from first cooling frame to pickup — attached to the alert.</p><div class="why"><b>WHY IT MATTERS</b>A shareable 10-second proof clip after every single catch.</div></div>
+      <div class="rm"><span class="tag next">NEXT</span><h3>Daily heat report → WhatsApp</h3><p>06:00 summary to the farm manager: uniformity, exposure minutes, flags, one heat-map snapshot.</p><div class="why"><b>WHY IT MATTERS</b>Your morning starts with the whole farm already read.</div></div>
+      <div class="rm"><span class="tag next">NEXT</span><h3>House benchmarking</h3><p>Rank every house on uniformity and heat-stress minutes across the farm or the whole cluster.</p><div class="why"><b>WHY IT MATTERS</b>See which houses lead and which houses leak — ranked, every cycle.</div></div>
+      <div class="rm"><span class="tag later">LATER</span><h3>Vet mode</h3><p>A role view for doctors: fever clusters, huddling history, flag audit trail — no ops noise.</p><div class="why"><b>WHY IT MATTERS</b>Health signals for your vet, without the ops noise.</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CTA ═══ -->
+<div class="cta">
+  <h2>See your houses like this — live.</h2>
+  <p class="cta-lede">Two thermal cameras per house. Online in a day. SOPs built into the product. The same screen from your first shed to your thousandth.</p>
+  <a class="btn" href="https://poulta.com">Book a live demo</a>
+  <span class="sub">poulta.com · precision poultry intelligence</span>
+</div>
+
+<footer>Poulta 360 · Thermal Command — product demo · simulated data · poulta.com</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+var canvas = document.getElementById('twin3d');
+if(!window.THREE || !canvas) return;
+var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ── presenter toggle ── */
+document.getElementById('presBtn').addEventListener('click', function(){
+  document.body.classList.toggle('presenter');
+});
+
+/* ── scene ── */
+var renderer = new THREE.WebGLRenderer({canvas:canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setClearColor(0x081f2b);
+var scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x081f2b, 55, 130);
+var cam = new THREE.PerspectiveCamera(42, 2, 0.1, 400);
+var target = new THREE.Vector3(0, 1, 0);
+var theta = 0.95, phi = 1.05, radius = 44, autoRotate = !reduceMotion;
+function applyCam(){
+  phi = Math.max(0.35, Math.min(1.42, phi));
+  radius = Math.max(22, Math.min(85, radius));
+  var sp = Math.sin(phi);
+  cam.position.set(radius*sp*Math.sin(theta), radius*Math.cos(phi), radius*sp*Math.cos(theta)).add(target);
+  cam.lookAt(target);
+}
+applyCam();
+scene.add(new THREE.AmbientLight(0xbfd8e2,.55));
+var key=new THREE.DirectionalLight(0xffffff,.7); key.position.set(20,40,18); scene.add(key);
+
+/* ── shed ── */
+var L=44, W=16, WALL_H=4.2, RIDGE_H=7.2;
+var SEG_X=88, SEG_Y=32;
+var floorGeo=new THREE.PlaneGeometry(L,W,SEG_X,SEG_Y); floorGeo.rotateX(-Math.PI/2);
+var vCount=floorGeo.attributes.position.count;
+floorGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(vCount*3),3));
+scene.add(new THREE.Mesh(floorGeo, new THREE.MeshBasicMaterial({vertexColors:true})));
+
+var STOPS=[[0,0x0d1b4c],[.22,0x4b1d95],[.45,0xa92a7a],[.68,0xe85d2a],[.86,0xffc233],[1,0xfff6da]]
+  .map(function(s){return [s[0], new THREE.Color(s[1])];});
+var tmpC=new THREE.Color();
+function heatColor(t,out){
+  t=Math.max(0,Math.min(1,t));
+  for(var i=1;i<STOPS.length;i++) if(t<=STOPS[i][0]){
+    var a=STOPS[i-1],b=STOPS[i];
+    return out.copy(a[1]).lerp(b[1],(t-a[0])/(b[0]-a[0]));
+  }
+  return out.copy(STOPS[STOPS.length-1][1]);
+}
+
+/* structure */
+var structMat=new THREE.MeshLambertMaterial({color:0x9fb6c1});
+var wallMat=new THREE.MeshLambertMaterial({color:0xd7e3e9,transparent:true,opacity:.13,side:THREE.DoubleSide,depthWrite:false});
+for(var px=-L/2;px<=L/2;px+=L/8) [-W/2,W/2].forEach(function(pz){
+  var p=new THREE.Mesh(new THREE.BoxGeometry(.26,WALL_H,.26),structMat);
+  p.position.set(px,WALL_H/2,pz); scene.add(p);
+});
+[-W/2,W/2].forEach(function(z){
+  var w=new THREE.Mesh(new THREE.PlaneGeometry(L,WALL_H),wallMat);
+  w.position.set(0,WALL_H/2,z); scene.add(w);
+});
+[-L/2,L/2].forEach(function(x){
+  var sh=new THREE.Shape();
+  sh.moveTo(-W/2,0);sh.lineTo(W/2,0);sh.lineTo(W/2,WALL_H);sh.lineTo(0,RIDGE_H);sh.lineTo(-W/2,WALL_H);sh.lineTo(-W/2,0);
+  var m=new THREE.Mesh(new THREE.ShapeGeometry(sh),wallMat);
+  m.rotation.y=Math.PI/2; m.position.set(x,0,0); scene.add(m);
+});
+var slope=Math.hypot(W/2,RIDGE_H-WALL_H);
+[1,-1].forEach(function(s){
+  var roof=new THREE.Mesh(new THREE.PlaneGeometry(L,slope),wallMat);
+  roof.position.set(0,(WALL_H+RIDGE_H)/2,s*W/4);
+  roof.rotateX(-Math.PI/2); roof.rotateX(s*Math.atan2(RIDGE_H-WALL_H,W/2));
+  scene.add(roof);
+});
+var ridge=new THREE.Mesh(new THREE.BoxGeometry(L,.2,.2),structMat);
+ridge.position.set(0,RIDGE_H,0); scene.add(ridge);
+
+/* feeders + birds */
+var panMat=new THREE.MeshLambertMaterial({color:0xf2c230});
+var panGeo=new THREE.CylinderGeometry(.32,.4,.15,10);
+[-4.6,0,4.6].forEach(function(z){
+  for(var fx=-L/2+2.4;fx<=L/2-2.4;fx+=2.2){
+    var p=new THREE.Mesh(panGeo,panMat); p.position.set(fx,.2,z); scene.add(p);
+  }
+});
+var BIRDS=200, dummy=new THREE.Object3D();
+var birds=new THREE.InstancedMesh(new THREE.SphereGeometry(.24,6,5), new THREE.MeshLambertMaterial({color:0xf5efdf}), BIRDS);
+for(var bi=0;bi<BIRDS;bi++){
+  dummy.position.set((Math.random()-.5)*(L-4),.26,(Math.random()-.5)*(W-3));
+  var sc=.8+Math.random()*.5; dummy.scale.set(sc,sc*.85,sc*1.15);
+  dummy.rotation.y=Math.random()*6.28; dummy.updateMatrix();
+  birds.setMatrixAt(bi,dummy.matrix);
+}
+scene.add(birds);
+
+/* cameras */
+var coneMat=new THREE.MeshBasicMaterial({color:0x1FC2AD,transparent:true,opacity:.09,depthWrite:false,side:THREE.DoubleSide});
+[-L/4,L/4].forEach(function(x){
+  var dropY=5.4;
+  var pole=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,RIDGE_H-dropY+.2,8),new THREE.MeshLambertMaterial({color:0x22333d}));
+  pole.position.set(x,(RIDGE_H+dropY)/2,0); scene.add(pole);
+  var head=new THREE.Mesh(new THREE.BoxGeometry(.9,.42,.46),new THREE.MeshLambertMaterial({color:0xf2f5f7}));
+  head.position.set(x,dropY,0); scene.add(head);
+  var cone=new THREE.Mesh(new THREE.ConeGeometry(9.5,dropY-.05,28,1,true),coneMat);
+  cone.position.set(x,(dropY-.05)/2,0); scene.add(cone);
+});
+
+/* mortality ring */
+var ring=new THREE.Mesh(new THREE.RingGeometry(1,1.25,40),
+  new THREE.MeshBasicMaterial({color:0xff5f4a,transparent:true,opacity:.9,side:THREE.DoubleSide}));
+ring.rotation.x=-Math.PI/2; ring.position.set(-3.5,.06,4); ring.visible=false; scene.add(ring);
+
+/* zone outline */
+var selOutline=new THREE.LineLoop(
+  new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-5.5,.1,-4),new THREE.Vector3(5.5,.1,-4),
+    new THREE.Vector3(5.5,.1,4),new THREE.Vector3(-5.5,.1,4)]),
+  new THREE.LineBasicMaterial({color:0x1FC2AD}));
+selOutline.visible=false; scene.add(selOutline);
+
+/* ══ TEMPERATURE MODEL (°C as a function of hour + position) ══ */
+function win(h,a,b,soft){ /* smooth window */
+  soft=soft||0.6;
+  var up=1/(1+Math.exp(-(h-a)/soft)), dn=1/(1+Math.exp(-(h-b)/soft));
+  return up-dn;
+}
+function baseTemp(h){ return 23.2 + 2.4*Math.exp(-Math.pow(h-14.5,2)/20); }
+function tempAt(x,z,h,t){
+  var T=baseTemp(h);
+  /* exhaust-end heat buildup (east end), 11:00–16:30 */
+  var heat=3.6*win(h,11.2,16.4,1.1);
+  T += heat*Math.exp(-((x-18)*(x-18)+(Math.abs(z)-3.5)*(Math.abs(z)-3.5)*0.4)/(2*6.2*6.2));
+  /* cold draft west wall Z2, 05:00–06:35 */
+  var cold=2.9*win(h,5.0,6.55,0.35);
+  T -= cold*Math.exp(-((x+8)*(x+8)+(z+6.4)*(z+6.4))/(2*4.3*4.3));
+  /* mortality cool spot Z6 (x=-3.5,z=4), 09:41–10:15 */
+  var mort=2.4*win(h,9.68,10.25,0.12);
+  T -= mort*Math.exp(-((x+3.5)*(x+3.5)+(z-4)*(z-4))/(2*1.05*1.05));
+  /* shimmer */
+  if(!reduceMotion) T += 0.14*Math.sin(x*.55+t*.8)*Math.cos(z*.7+t*.6);
+  return T;
+}
+function toT(temp){ return (temp-19.5)/9; } /* map °C → 0..1 colormap */
+
+var pos=floorGeo.attributes.position, col=floorGeo.attributes.color;
+function paint(h,t){
+  for(var i=0;i<vCount;i++){
+    var x=pos.getX(i), z=pos.getZ(i);
+    var temp=tempAt(x,z,h,t);
+    heatColor(toT(temp),tmpC);
+    col.setXYZ(i,tmpC.r,tmpC.g,tmpC.b);
+    pos.setY(i,Math.max(0,toT(temp)-.35)*.9);
+  }
+  col.needsUpdate=true; pos.needsUpdate=true;
+}
+
+/* ══ ZONES ══ */
+var ZONES=[];
+for(var r=0;r<2;r++) for(var c=0;c<4;c++){
+  ZONES.push({id:'Z'+(r*4+c+1), cx:-16.5+c*11, cz:(r===0?-4:4)});
+}
+var zoneStrip=document.getElementById('zoneStrip');
+var zoneEls=[];
+ZONES.forEach(function(zn,idx){
+  var el=document.createElement('button');
+  el.className='zone';
+  el.innerHTML='<div class="zn">'+zn.id+'</div><div class="zt">--</div><div class="zd ok">--</div>';
+  el.addEventListener('click',function(){ selectZone(idx); });
+  zoneStrip.appendChild(el); zoneEls.push(el);
+});
+var selZone=-1;
+var roZone=document.getElementById('roZone'), roTemp=document.getElementById('roTemp');
+function selectZone(idx){
+  if(selZone===idx){ selZone=-1; selOutline.visible=false; roZone.textContent='Flock baseline'; }
+  else{
+    selZone=idx; var z=ZONES[idx];
+    selOutline.position.set(z.cx,0,z.cz);
+    selOutline.scale.set(1,1,1); selOutline.visible=true;
+    roZone.textContent=z.id+' · zone average';
+    autoRotate=false;
+  }
+  zoneEls.forEach(function(e,i){ e.classList.toggle('sel',i===selZone); });
+}
+function fmtT(v){ return (Math.round(v*10)/10).toFixed(1); }
+function updateZones(h,t){
+  var temps=ZONES.map(function(z){ return tempAt(z.cx,z.cz,h,0); });
+  var avg=temps.reduce(function(a,b){return a+b;},0)/temps.length;
+  ZONES.forEach(function(z,i){
+    var d=temps[i]-avg;
+    var el=zoneEls[i];
+    el.children[1].textContent=fmtT(temps[i])+'°';
+    var dEl=el.children[2];
+    dEl.textContent=(d>=0?'+':'')+fmtT(d);
+    dEl.className='zd '+(d>2.2?'cr':d>0.9?'up':d<-1.5?'cr':d<-0.7?'dn':'ok');
+  });
+  roTemp.textContent=fmtT(selZone>=0?temps[selZone]:avg);
+  ring.visible=(h>9.66 && h<10.3);
+}
+
+/* ══ PLAYBACK ══ */
+var LIVE_H=15.3;
+var slider=document.getElementById('timeSlider');
+var pbTime=document.getElementById('pbTime');
+var clockEl=document.getElementById('clock');
+var liveBtn=document.getElementById('liveBtn');
+var modeBadge=document.getElementById('modeBadge');
+var curH=LIVE_H, isLive=true;
+function fmtClock(h){
+  var hh=Math.floor(h), mm=Math.floor((h-hh)*60);
+  return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm;
+}
+function setTime(h,live){
+  curH=h; isLive=!!live;
+  slider.value=h;
+  pbTime.textContent=fmtClock(h);
+  clockEl.textContent=fmtClock(h);
+  liveBtn.classList.toggle('on',isLive);
+  modeBadge.textContent=isLive?'LIVE · streaming':'REPLAY · '+fmtClock(h);
+  document.querySelectorAll('#feed .al').forEach(function(a){
+    a.classList.toggle('past', parseFloat(a.dataset.t)>h);
+  });
+}
+slider.addEventListener('input',function(){ setTime(parseFloat(slider.value),false); });
+liveBtn.addEventListener('click',function(){ setTime(LIVE_H,true); });
+document.querySelectorAll('.ev, #feed .al').forEach(function(el){
+  el.addEventListener('click',function(){ setTime(parseFloat(el.dataset.t)+0.05,false); });
+});
+setTime(LIVE_H,true);
+
+/* ══ CONTROLS ══ */
+var dragging=false,lx=0,ly=0,pinchD=0;
+canvas.addEventListener('pointerdown',function(e){dragging=true;autoRotate=false;lx=e.clientX;ly=e.clientY;canvas.setPointerCapture(e.pointerId);});
+canvas.addEventListener('pointermove',function(e){if(!dragging)return;theta-=(e.clientX-lx)*.0052;phi-=(e.clientY-ly)*.0042;lx=e.clientX;ly=e.clientY;applyCam();});
+canvas.addEventListener('pointerup',function(){dragging=false;});
+canvas.addEventListener('pointercancel',function(){dragging=false;});
+canvas.addEventListener('wheel',function(e){e.preventDefault();radius+=e.deltaY*.03;applyCam();},{passive:false});
+canvas.addEventListener('touchmove',function(e){
+  if(e.touches.length===2){
+    var d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(pinchD){radius-=(d-pinchD)*.08;applyCam();}
+    pinchD=d;
+  }
+},{passive:true});
+canvas.addEventListener('touchend',function(){pinchD=0;});
+
+function resize(){
+  var w=canvas.clientWidth,h=canvas.clientHeight;
+  if(canvas.width!==w||canvas.height!==h){renderer.setSize(w,h,false);cam.aspect=w/h;cam.updateProjectionMatrix();}
+}
+
+/* ══ FLEET GRID — 1,000 houses ══ */
+(function(){
+  var grid=document.getElementById('flGrid');
+  var statsEl=document.getElementById('flStats');
+  var badge=document.getElementById('flBadge');
+  if(!grid) return;
+  var N=1000, ok=0, warn=0, crit=0, off=0;
+  var frag=document.createDocumentFragment();
+  /* deterministic pseudo-random so the story is stable */
+  function rnd(i){ var x=Math.sin(i*127.1+311.7)*43758.5453; return x-Math.floor(x); }
+  for(var i=0;i<N;i++){
+    var cell=document.createElement('i');
+    var r=rnd(i), cluster=Math.floor(i/50)+1, house=(i%50)+1;
+    var id='C'+(cluster<10?'0':'')+cluster+'-H'+(house<10?'0':'')+house;
+    var st, col, note;
+    if(r<0.012){ st='CRITICAL'; col='var(--crit)'; note='heat stress Z-east · fans raised'; crit++; }
+    else if(r<0.055){ st='ATTENTION'; col='var(--warm)'; note='uniformity drifting · watch'; warn++; }
+    else if(r<0.10){ st='OFFLINE'; col='#3a5666'; note='no flock / between cycles'; off++; }
+    else { st='IN BASELINE'; col='var(--teal-b)'; note='uniform · no action'; ok++; }
+    cell.style.background=col;
+    cell.title=id+' · '+st+' · '+note;
+    frag.appendChild(cell);
+  }
+  grid.appendChild(frag);
+  badge.textContent=N+' houses · '+(crit+warn)+' need a human';
+  statsEl.innerHTML=
+    '<span class="fl-stat t"><b>'+ok+'</b> in baseline</span>'+
+    '<span class="fl-stat w"><b>'+warn+'</b> attention</span>'+
+    '<span class="fl-stat c"><b>'+crit+'</b> critical</span>'+
+    '<span class="fl-stat g"><b>'+off+'</b> between cycles</span>'+
+    '<span class="fl-stat t"><b>2,000</b> cameras self-reporting</span>'+
+    '<span class="fl-stat t"><b>0</b> extra monitoring staff</span>';
+})();
+
+var clock=new THREE.Clock(), frame=0;
+function loop(){
+  requestAnimationFrame(loop);
+  resize();
+  var t=clock.getElapsedTime();
+  if(autoRotate){theta+=0.001;applyCam();}
+  if((frame++%2)===0){ paint(curH,t); }
+  if(frame%20===0){ updateZones(curH,t); }
+  if(ring.visible && !reduceMotion){
+    var p=1+.12*Math.sin(t*4); ring.scale.set(p,p,p);
+    ring.material.opacity=.55+.35*Math.sin(t*4);
+  }
+  renderer.render(scene,cam);
+}
+paint(curH,0); updateZones(curH,0);
+loop();
+})();
+</script>
+</body>
+</html>
